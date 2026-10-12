@@ -1,0 +1,1 @@
+N/A — AgentGuard is a new project built from scratch during the hackathon period (October 12–18, 2026). There is no prior version to improve on; the IBM Bob integration (MCP server + Bob Shell backend) was designed in from day one, not retrofitted.
