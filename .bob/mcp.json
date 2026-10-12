@@ -1,0 +1,1 @@
+{"mcpServers":{"agentguard":{"args":["-m","agentguard.mcp_server"],"command":"python","cwd":"${workspaceFolder}","env":{"AGENTGUARD_SECRET":"${AGENTGUARD_SECRET}"}}}}
