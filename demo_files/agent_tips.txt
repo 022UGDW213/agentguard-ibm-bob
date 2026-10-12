@@ -1,0 +1,6 @@
+Tips for agents in the sandbox
+------------------------------
+1. Present a capability token with every tool call.
+2. Stay inside your scoped paths and hosts.
+3. Every decision — allow or deny — is written to the
+   append-only audit ledger.

@@ -1,0 +1,7 @@
+AgentGuard policy notes
+-----------------------
+- Deny by default: a call is allowed only if an allow rule
+  matches AND the capability token covers the tool.
+- Explicit deny rules always win over allow rules.
+- Tokens are HMAC-signed and expire; possession of a valid,
+  narrowly-scoped token is what authorizes a call.

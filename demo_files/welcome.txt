@@ -1,0 +1,5 @@
+Welcome to the AgentGuard demo sandbox.
+
+Only the files in this directory may be read by an agent.
+Try read_file on 'welcome.txt' (allowed) versus
+'/etc/passwd' (denied: path escapes sandbox).
