@@ -24,12 +24,12 @@ The harness wraps a `ModelBackend` interface — the same choke point governs lo
 
 ## Slide 5 — IBM Bob integration (two directions)
 **Bob → AgentGuard (primary):** a real MCP server (`check_policy`, `scan_codebase`, `audit_summary`) built on the official MCP SDK; `.bob/mcp.json` auto-wires it into Bob IDE — guardrails *inside* Bob's own workflow. Bob reads the codebase and *generates* the security policies from what it understands.
-**AgentGuard → Bob:** `BobShellBackend` drives Bob headlessly via the Bob Shell CLI, so a Bob-powered agent loop is governed by the same policy engine. Bob also *authored the test suite* — 62 tests passing, 1 skipped.
+**AgentGuard → Bob:** `BobShellBackend` drives Bob headlessly via the Bob Shell CLI, so a Bob-powered agent loop is governed by the same policy engine. Bob also *authored the test suite* — 90 tests passing, 4 skipped.
 Honest note: IBM publishes no public REST API for Bob — CLI + MCP are the verified surfaces, and we built on exactly those.
 - *Notes: This is the 30% "depth of Bob adoption" slide. Stress verified surfaces: "We read the docs. We didn't invent endpoints."*
 
 ## Slide 6 — Live demo
-agentguard-demo.o22ugdw213.network — one-click guest login (no signup), glassmorphism/cyberpunk UI with a "Built with IBM Bob" section. Try it: an allowed file read succeeds; `read_file /etc/passwd` is **denied** on screen with the reason; pasting an AWS key into the scanner gets flagged; the audit log records all of it. Plus a **Skills API** with a try-it console — six live skills (`policy-check`, `token-mint`, `token-verify`, `secret-scan`, `audit-query`, `harness-run`); judges can run attacks themselves and watch the ledger.
+agentguard-demo.o22ugdw213.network — one-click guest login (no signup), glassmorphism/cyberpunk UI with a "Built with IBM Bob" section. Try it: an allowed file read succeeds; `read_file /etc/passwd` is **denied** on screen with the reason; pasting an AWS key into the scanner gets flagged; the audit log records all of it. Plus a **Skills API** with a try-it console — seven live skills (`policy-check`, `token-mint`, `token-verify`, `secret-scan`, `audit-query`, `harness-run`, `trap`); judges can run attacks themselves and watch the ledger. The **trap skill** fingerprints every denied attack by technique and drafts the policy that catches its whole class — every attack makes the guard stronger.
 - *Notes: Don't narrate over the demo — let the DENY land. "That denial is the whole product."*
 
 ## Slide 7 — Architecture
@@ -37,8 +37,8 @@ One diagram: Agent → GuardedHarness (policy engine + token verifier) → Tools
 - *Notes: Walk the diagram in 20 seconds. Point at the harness: "One choke point. That's the entire security model."*
 
 ## Slide 8 — It actually works: tests
-62 tests pass, 1 skipped (the live-Bob test skips cleanly without a key — it never fakes a result). Cross-language token tests prove Java-minted tokens verify in Python and vice versa. `pip-audit` clean — zero known vulnerabilities. CLI verified end to end: allowed calls succeed, `/etc/passwd` denied, audit shows 2 allow / 1 deny. Dockerized. No mocks, no stubs.
-- *Notes: "A security tool you can't test is a rumor. Ours has 62 passing tests."*
+90 tests pass, 4 skipped (the skips need a real Bob API key — they never fake a result). Cross-language token tests prove Java-minted tokens verify in Python and vice versa. `pip-audit` clean — zero known vulnerabilities. Red-team replay: 76 mutated attack variants fired at the live demo — 74 denied, 0 allowed. CLI verified end to end: allowed calls succeed, `/etc/passwd` denied, audit shows 2 allow / 1 deny. Dockerized. No mocks, no stubs.
+- *Notes: "A security tool you can't test is a rumor. Ours has 90 passing tests."*
 
 ## Slide 9 — What's next
 Ship the audit ledger to tamper-evident storage, add per-team policy packs, a hosted policy API, and deeper Bob IDE workflows (pre-tool-call hooks). Long-term: the all-in-one agent security platform — beyond red-team/blue-team.

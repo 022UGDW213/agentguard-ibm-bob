@@ -107,7 +107,7 @@
   <h2>Integration, two directions</h2>
   <div class="pillars">
     <div class="pillar"><h3>Bob → AgentGuard</h3><p>A real MCP server (<span class="mono">check_policy</span>, <span class="mono">scan_codebase</span>, <span class="mono">audit_summary</span>) on the official MCP SDK; <span class="mono">.bob/mcp.json</span> auto-wires it into Bob IDE. Bob reads the codebase and <em>generates</em> the security policies.</p></div>
-    <div class="pillar"><h3>AgentGuard → Bob</h3><p><span class="mono">BobShellBackend</span> drives Bob headlessly via the Bob Shell CLI — a Bob-powered agent loop under the same policy engine. Bob <em>authored the test suite</em>: 62 tests passing, 1 skipped.</p></div>
+    <div class="pillar"><h3>AgentGuard → Bob</h3><p><span class="mono">BobShellBackend</span> drives Bob headlessly via the Bob Shell CLI — a Bob-powered agent loop under the same policy engine. Bob <em>authored the test suite</em>: 90 tests passing, 4 skipped.</p></div>
   </div>
   <p class="lede" style="margin-top:0.35in">Honest note: IBM publishes no public REST API for Bob — CLI + MCP are the verified surfaces, and we built on exactly those. We read the docs; we didn’t invent endpoints.</p>
   <div class="foot"><span>5 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
@@ -118,12 +118,11 @@
   <div class="kicker">Live demo</div>
   <h2>Watch the <span class="accent2">DENY</span> land</h2>
   <p class="lede"><span class="url">agentguard-demo.o22ugdw213.network</span> — one-click guest login, no signup.</p>
-  <div class="code-line">read_file welcome.txt <span class="allow">→ ALLOW</span> · a legitimate call with a valid token</div>
+  <div class="code-line">read_file welcome.txt <span class="allow">→ ALLOW</span> · legitimate call, valid token</div>
   <div class="code-line">read_file /etc/passwd <span class="deny">→ DENY</span> · path escapes the sandbox</div>
-  <div class="code-line">read_file ../../etc/passwd <span class="deny">→ DENY</span> · traversal trick</div>
-  <div class="code-line">run_command <span class="deny">→ DENY</span> · tool the policy never heard of — denied by default</div>
-  <div class="code-line">paste AWS key into scanner <span class="deny">→ FLAGGED</span> · real detection patterns</div>
-  <p class="lede" style="margin-top:0.12in;font-size:19pt">Plus a <b>Skills API</b> try-it console — six live skills (<span class="mono">policy-check</span>, <span class="mono">token-mint</span>, <span class="mono">token-verify</span>, <span class="mono">secret-scan</span>, <span class="mono">audit-query</span>, <span class="mono">harness-run</span>). Run attacks yourself; every attempt lands in the audit ledger. That denial is the whole product.</p>
+  <div class="code-line">run_command <span class="deny">→ DENY</span> · never heard of it — denied by default</div>
+  <div class="code-line"><span class="mono">trap</span> read_file /etc/passwd <span class="deny">→ DENY</span> · fingerprinted <span class="mono">sandbox_escape</span>, policy drafted</div>
+  <p class="lede" style="margin-top:0.12in;font-size:19pt">Plus a <b>Skills API</b> try-it console — seven live skills including <span class="mono">trap</span>. Attack it yourself: the trap fingerprints every attempt and drafts the policy that stops its whole class. Every attack makes the guard stronger.</p>
   <div class="foot"><span>6 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
 </div>
 
@@ -144,15 +143,15 @@
 <!-- Slide 8 -->
 <div class="slide">
   <div class="kicker">Proof it works</div>
-  <div class="big-num">62 <small>tests pass · 1 skipped</small></div>
+  <div class="big-num">90 <small>tests pass · 4 skipped</small></div>
   <ul>
-    <li>The 1 skip is the live-Bob test without a key — it skips cleanly, never fakes a result.</li>
+    <li>The 4 skips need a real Bob API key — they skip cleanly, never fake a result.</li>
     <li>Cross-language token tests: Java-minted tokens verify in Python and vice versa.</li>
-    <li><span class="mono">pip-audit</span> clean — zero known vulnerabilities in dependencies.</li>
+    <li><span class="mono">pip-audit</span> clean — zero known vulnerabilities; Dockerized, no mocks, no stubs.</li>
+    <li>Red-team replay: 76 attack variants fired at the live demo — 74 denied, <b>0 allowed</b>.</li>
     <li>CLI verified end to end: allowed calls succeed, <span class="mono">/etc/passwd</span> denied, audit shows 2 allow / 1 deny.</li>
-    <li>Dockerized. No mocks, no stubs.</li>
   </ul>
-  <p class="lede" style="margin-top:0.25in">A security tool you can’t test is a rumor. Ours has 62 passing tests.</p>
+  <p class="lede" style="margin-top:0.25in">A security tool you can’t test is a rumor. Ours has 90 passing tests.</p>
   <div class="foot"><span>8 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
 </div>
 
