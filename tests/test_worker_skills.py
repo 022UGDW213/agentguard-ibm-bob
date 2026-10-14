@@ -106,7 +106,7 @@ def test_skills_list(w_fix):
     assert data["ok"]
     names = [s["name"] for s in data["skills"]]
     assert names == ["policy-check", "token-mint", "token-verify",
-                     "secret-scan", "audit-query", "harness-run"]
+                     "secret-scan", "audit-query", "harness-run", "trap"]
     for skill in data["skills"]:
         assert skill["path"] and skill["method"] and skill["description"]
         assert "example" in skill and "input_schema" in skill

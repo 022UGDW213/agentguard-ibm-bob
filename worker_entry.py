@@ -300,6 +300,143 @@ DEMO_FILES = {
 
 
 # ---------------------------------------------------------------------------
+# Trap skill — honeypot intel. Deny first, study second.
+#
+# When a tool call is denied, the trap fingerprints the attack technique,
+# logs the attempt (with secret-looking values redacted) to the audit ledger,
+# and drafts a human-readable policy rule that would catch that technique
+# class. The trap NEVER allows a call: intel capture is a pure side effect
+# that runs after the deny decision, wrapped so its failure cannot flip a
+# deny into an allow.
+# ---------------------------------------------------------------------------
+
+TRAP_INJECTION_PHRASES = (
+    "ignore previous instructions",
+    "ignore all previous instructions",
+    "disregard previous",
+    "disregard all previous",
+    "forget your instructions",
+    "system:",
+    "you are now",
+    "act as",
+    "pretend you are",
+    "jailbreak",
+    "do anything now",
+    "developer mode",
+    "bypass the policy",
+    "override policy",
+)
+
+TRAP_SUGGESTED_POLICIES = {
+    "path_traversal": (
+        "Deny any read_file target containing '..' segments; resolve every "
+        "path against the sandbox root before authorizing."
+    ),
+    "sandbox_escape": (
+        "Deny absolute paths and any target resolving outside the sandbox "
+        "directory; the sandbox root is the only readable location."
+    ),
+    "sandbox_probe": (
+        "Deny reads of files not on the sandbox allowlist and log probes "
+        "as reconnaissance — repeated probes from one subject merit review."
+    ),
+    "scope_escalation": (
+        "A token may only authorize the tools and arguments within the "
+        "scopes it already carries; broader requests are denied outright."
+    ),
+    "token_tampering": (
+        "Reject any token whose HMAC signature does not verify; treat "
+        "repeated tampering as compromise and rotate the signing secret."
+    ),
+    "token_expired": (
+        "Reject expired tokens outright; the caller must re-authenticate "
+        "for a fresh, short-lived token."
+    ),
+    "secret_exfiltration_attempt": (
+        "Scan tool arguments for secret patterns; deny and flag any call "
+        "carrying credential material instead of executing it."
+    ),
+    "prompt_injection_pattern": (
+        "Deny tool arguments containing instruction-override phrases such "
+        "as 'ignore previous instructions'; treat them as hostile input."
+    ),
+    "destructive_command": (
+        "Deny destructive commands by default; require an explicit, "
+        "separately-granted destructive scope that is never in guest hands."
+    ),
+    "unknown": (
+        "Deny by default and escalate the attempt to a human reviewer; no "
+        "new allow rule is created from an unrecognized technique."
+    ),
+}
+
+
+def fingerprint_trap_attempt(tool: str, args: dict, reason: str) -> str:
+    """Classify a denied tool call into an attack-technique label.
+
+    Pure function of (tool, args, reason) — it never touches the network,
+    the ledger, or the decision path.
+    """
+    r = (reason or "").lower()
+    if "invalid signature" in r or "malformed token" in r:
+        return "token_tampering"
+    if "expired" in r:
+        return "token_expired"
+    if "do not cover" in r or "scope" in r:
+        return "scope_escalation"
+    if "path escapes sandbox" in r:
+        blob = json.dumps(args, sort_keys=True, default=str)
+        return "path_traversal" if ".." in blob else "sandbox_escape"
+    blob_raw = tool + " " + json.dumps(args, sort_keys=True, default=str)
+    blob = blob_raw.lower()
+    if any(p in blob for p in TRAP_INJECTION_PHRASES):
+        return "prompt_injection_pattern"
+    # NOTE: secret patterns are case-sensitive — scan the un-lowercased blob.
+    if scan_text_for_secrets(blob_raw):
+        return "secret_exfiltration_attempt"
+    if "file not found in demo directory" in r:
+        return "sandbox_probe"
+    if tool == "run_command" or "destructive" in r:
+        return "destructive_command"
+    return "unknown"
+
+
+def redact_trap_args(args: dict) -> dict:
+    """Summarize tool args for the intel record: secret-looking values are
+    replaced by their finding kind, long values truncated. Raw secrets never
+    reach the ledger through the trap."""
+    out = {}
+    for key, value in args.items():
+        text = value if isinstance(value, str) else json.dumps(value,
+                                                                default=str)
+        findings = scan_text_for_secrets(text)
+        if findings:
+            kinds = sorted({f["kind"] for f in findings})
+            out[key] = "[redacted: %s]" % ", ".join(kinds)
+        elif len(text) > 200:
+            out[key] = text[:200] + "…[truncated]"
+        else:
+            out[key] = value
+    return out
+
+
+def build_trap_intel(tool: str, args: dict, reason: str) -> dict:
+    """Build the intel package for a denied call: technique label, a drafted
+    policy rule, and the ledger-safe record. Raises nothing by contract of
+    its callers — the handler wraps it defensively anyway."""
+    technique = fingerprint_trap_attempt(tool, args, reason)
+    return {
+        "technique": technique,
+        "suggested_policy": TRAP_SUGGESTED_POLICIES[technique],
+        "record": {
+            "tool": tool,
+            "args": redact_trap_args(args),
+            "technique": technique,
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
 # Skills API — every demo capability as a callable skill.
 # GET /api/skills lists them; one endpoint per skill below.
 # ---------------------------------------------------------------------------
@@ -394,6 +531,26 @@ SKILLS = [
         ),
         "input_schema": {},
         "example": {},
+    },
+    {
+        "name": "trap",
+        "path": "/api/skills/trap",
+        "method": "POST",
+        "auth": "any valid token (guest works)",
+        "description": (
+            "Honeypot intel: submit a tool call and get the policy "
+            "decision. If it is denied, the attempt is fingerprinted "
+            "(path traversal, sandbox escape, token tampering, prompt "
+            "injection, …), logged to the audit ledger with secrets "
+            "redacted, and answered with a drafted policy rule that would "
+            "catch that technique class. The trap never allows a call — "
+            "intel is captured only after the deny."
+        ),
+        "input_schema": {
+            "tool": "string, required — e.g. \"read_file\"",
+            "args": "object, required — e.g. {\"path\": \"/etc/passwd\"}",
+        },
+        "example": {"tool": "read_file", "args": {"path": "/etc/passwd"}},
     },
 ]
 
@@ -999,6 +1156,16 @@ nothing is executed. Running serverless.</div>
     <button id="skill-run" type="button">Run skill</button>
     <pre id="skill-output" class="mono"></pre>
   </div>
+  <div id="trap-section">
+    <h2>Red-team trap</h2>
+    <p class="note">Every attack makes the guard stronger. Send a hostile
+    tool call to the <span class="mono">trap</span> skill: it is denied
+    first &mdash; always &mdash; then the attempt is fingerprinted, logged
+    to the audit ledger with secrets redacted, and answered with a drafted
+    policy rule that would catch that technique class. Try it in the Skills
+    console above: pick <span class="mono">trap</span> and run the
+    prefilled attack.</p>
+  </div>
 </div>
 <noscript><p class="error">This demo needs JavaScript for the sign-in step.
 You can also run it locally from the repo: <span class="mono">python3
@@ -1149,6 +1316,8 @@ class Default(WorkerEntrypoint):
             return await self.handle_skill_audit_query(request)
         if method == "POST" and path == "/api/skills/harness-run":
             return await self.handle_skill_harness_run(request)
+        if method == "POST" and path == "/api/skills/trap":
+            return await self.handle_skill_trap(request)
         return html_response("<h1>404</h1><p>Not found.</p>", 404, "Not found")
 
     async def _audit(self):
@@ -1474,6 +1643,80 @@ class Default(WorkerEntrypoint):
             "steps": steps, "allowed": allowed,
             "denied": len(steps) - allowed,
         })
+
+    async def handle_skill_trap(self, request):
+        """Honeypot intel skill: deny first, study second.
+
+        The tool call is evaluated through the exact same deny-first path
+        as policy-check (token scopes + sandbox path validation + denylist).
+        If allowed, the decision is returned normally — nothing is trapped.
+        If denied, the deny is final and unconditional; intel capture then
+        runs as a pure side effect, wrapped so its failure can never flip
+        the deny into an allow.
+        """
+        cap, token, err = await self._skill_auth(request)
+        if err:
+            return err
+        data, derr = await self._skill_body(request)
+        if derr:
+            return derr
+        tool = str(data.get("tool", "")).strip()
+        args = data.get("args")
+        if not tool or not isinstance(args, dict):
+            return json_response(
+                {"ok": False,
+                 "error": "Provide 'tool' (string) and 'args' (object)."},
+                400)
+        secret = await get_secret(self.env)
+        audit = await self._audit()
+        # Keep the attacker's original input for the intel record; the
+        # sandbox check below works on a copy.
+        raw_args = dict(args)
+        # --- Deny-first evaluation: identical to policy-check. ---
+        deny_reason = None
+        if tool == "read_file":
+            try:
+                args = dict(args)
+                args["path"] = resolve_demo_path(str(args.get("path", "")))
+            except (SandboxEscape, ValueError) as exc:
+                deny_reason = str(exc)
+        decision = None
+        if deny_reason is None:
+            decision = PolicyEngine(DEMO_POLICY, secret).authorize(
+                tool, args, token)
+            if not decision.allow:
+                deny_reason = decision.reason
+        if deny_reason is None:
+            # Allowed — nothing to trap; behaves exactly like policy-check.
+            await self._skill_audit(audit, "trap", {"tool": tool}, True,
+                                    decision.reason, cap)
+            return json_response({
+                "ok": True, "skill": "trap", "tool": tool,
+                "allow": True, "reason": decision.reason,
+                "trapped": False,
+            })
+        # --- Denied: capture intel as a pure side effect. ---
+        # The deny decision above is final. This block is wrapped so that
+        # any failure in intel capture still returns the deny.
+        intel = None
+        try:
+            intel = build_trap_intel(tool, raw_args, deny_reason)
+            await audit.record("skill.trap.intel", intel["record"], False,
+                               deny_reason,
+                               subject=cap.subject, token_id=cap.token_id)
+        except Exception:
+            intel = None
+        await self._skill_audit(audit, "trap", {"tool": tool}, False,
+                                deny_reason, cap)
+        resp = {
+            "ok": True, "skill": "trap", "tool": tool,
+            "allow": False, "reason": deny_reason,
+            "trapped": True,
+        }
+        if intel is not None:
+            resp["technique"] = intel["technique"]
+            resp["suggested_policy"] = intel["suggested_policy"]
+        return json_response(resp)
 
     async def handle_check(self, request):
         audit = await self._audit()
