@@ -5,6 +5,11 @@
 it asks the harness, which authorizes via the policy engine, executes only on
 allow, and audits every decision.
 
+`GuardedHarness.run_task()` executes a scripted task plan through the same
+pipeline: each step goes through policy-check (engine.authorize) plus
+token-verify, then executes through `tool_call`, which audits the decision.
+The returned TaskTranscript is the demo agent's full run record.
+
 Tools are real callables registered in a ToolRegistry. Two filesystem tools
 ship built in, sandboxed to directories you configure; anything else an agent
 needs (HTTP, shell, database) is registered by the embedding application with
@@ -14,13 +19,40 @@ its own policy rules.
 from __future__ import annotations
 
 import fnmatch
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
 from . import tokens as _tokens
 from .audit import AuditLog
 from .policy import Decision, PolicyEngine
+
+
+@dataclass
+class TaskStepResult:
+    """One step of a scripted task: the decision and what happened."""
+
+    tool: str
+    args: dict
+    allow: bool
+    reason: str
+    output: object = None
+    error: str = ""
+
+
+@dataclass
+class TaskTranscript:
+    """The full record of a scripted task run through the guard."""
+
+    steps: list[TaskStepResult] = field(default_factory=list)
+
+    @property
+    def allowed(self) -> int:
+        return sum(1 for s in self.steps if s.allow)
+
+    @property
+    def denied(self) -> int:
+        return sum(1 for s in self.steps if not s.allow)
 
 
 @dataclass
@@ -128,3 +160,29 @@ class GuardedHarness:
 
     def tools_matching(self, pattern: str) -> list[str]:
         return [n for n in self.registry.names() if fnmatch.fnmatchcase(n, pattern)]
+
+    def run_task(self, plan: list[dict], token: str) -> TaskTranscript:
+        """Execute a scripted task plan through the guard's skill pipeline.
+
+        Each plan step is a {"tool": ..., "args": {...}} dict. Every step
+        goes through policy-check (engine.authorize) and token-verify, then
+        executes via tool_call(), which audits the decision. Nothing
+        bypasses the choke point.
+        """
+        transcript = TaskTranscript()
+        for step in plan:
+            tool = step.get("tool", "")
+            args = dict(step.get("args", {}))
+            # Policy-check + token-verify: pure decision, no side effects.
+            decision: Decision = self.engine.authorize(tool, args, token)
+            # Guarded execution: audits the decision, runs only on allow.
+            result = self.tool_call(tool, args, token)
+            transcript.steps.append(TaskStepResult(
+                tool=tool,
+                args=args,
+                allow=result.ok,
+                reason=decision.reason,
+                output=result.output,
+                error=result.error,
+            ))
+        return transcript

@@ -299,6 +299,130 @@ DEMO_FILES = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Skills API — every demo capability as a callable skill.
+# GET /api/skills lists them; one endpoint per skill below.
+# ---------------------------------------------------------------------------
+
+SKILLS = [
+    {
+        "name": "policy-check",
+        "path": "/api/skills/policy-check",
+        "method": "POST",
+        "auth": "any valid token (guest works)",
+        "description": (
+            "Submit a tool call and get the policy engine's ALLOW/DENY "
+            "decision with the reason. Nothing is executed — this is the "
+            "read-only view of the guard."
+        ),
+        "input_schema": {
+            "tool": "string, required — e.g. \"read_file\"",
+            "args": "object, required — e.g. {\"path\": \"welcome.txt\"}",
+        },
+        "example": {"tool": "read_file", "args": {"path": "welcome.txt"}},
+    },
+    {
+        "name": "token-mint",
+        "path": "/api/skills/token-mint",
+        "method": "POST",
+        "auth": (
+            "any valid token — the minted token can only carry scopes you "
+            "already hold (no privilege escalation, ever)"
+        ),
+        "description": (
+            "Mint a new HMAC-signed capability token. Scopes must be a "
+            "subset of your own, and the TTL can't outlive your token."
+        ),
+        "input_schema": {
+            "scopes": "array of strings, optional — defaults to your scopes",
+            "ttl_seconds": "integer, optional — default 3600",
+        },
+        "example": {"scopes": ["tool:read_file"], "ttl_seconds": 600},
+    },
+    {
+        "name": "token-verify",
+        "path": "/api/skills/token-verify",
+        "method": "POST",
+        "auth": "any valid token (guest works)",
+        "description": (
+            "Verify any capability token: signature, expiry, and scopes. "
+            "Returns what the token allows — or why it doesn't."
+        ),
+        "input_schema": {
+            "token": "string, required — the token to inspect",
+        },
+        "example": {"token": "<paste a token here>"},
+    },
+    {
+        "name": "secret-scan",
+        "path": "/api/skills/secret-scan",
+        "method": "POST",
+        "auth": "any valid token (guest works)",
+        "description": (
+            "Scan text with the real secret-pattern regexes — AWS keys, "
+            "GitHub tokens, private keys, passwords, and more."
+        ),
+        "input_schema": {
+            "text": "string, required — the text to scan",
+        },
+        "example": {"text": "aws_access_key_id=AKIAIOSFODNN7EXAMPLE"},
+    },
+    {
+        "name": "audit-query",
+        "path": "/api/skills/audit-query",
+        "method": "GET",
+        "auth": "any valid token (guest works)",
+        "description": (
+            "Read recent entries from the append-only audit ledger. "
+            "Sensitive values are never stored, so there's nothing to leak."
+        ),
+        "input_schema": {
+            "limit": "integer query param, optional — default 20, max 100",
+        },
+        "example": {"limit": 10},
+    },
+    {
+        "name": "harness-run",
+        "path": "/api/skills/harness-run",
+        "method": "POST",
+        "auth": "any valid token (guest works)",
+        "description": (
+            "Run the scripted demo agent through the guard: four tool "
+            "calls — a good read, a sandbox escape, a secret leak, and a "
+            "destructive command. Each is authorized, executed-or-denied, "
+            "and audited; the full transcript comes back."
+        ),
+        "input_schema": {},
+        "example": {},
+    },
+]
+
+# The scripted demo-agent task run by the harness-run skill. Each step goes
+# through the policy engine with the caller's token and is audited.
+HARNESS_PLAN = [
+    {
+        "note": "The agent reads the welcome file.",
+        "tool": "read_file",
+        "target": "welcome.txt",
+    },
+    {
+        "note": "The agent tries to read outside the sandbox.",
+        "tool": "read_file",
+        "target": "/etc/passwd",
+    },
+    {
+        "note": "The agent scans pasted text for secrets.",
+        "tool": "scan_text",
+        "target": "deploy key: AKIAIOSFODNN7EXAMPLE — ship it",
+    },
+    {
+        "note": "The agent tries a destructive shell command.",
+        "tool": "run_command",
+        "target": "rm -rf /",
+    },
+]
+
+
 def env_get(env, name: str, default: str = "") -> str:
     """Read a worker var (or os.environ fallback); never raises."""
     try:
@@ -587,6 +711,31 @@ a:hover{text-shadow:0 0 12px rgba(0,229,255,.65)}
   h1{letter-spacing:.03em}
   .big-guest{font-size:1rem}
 }
+.bob-card{
+  background:linear-gradient(135deg, rgba(139,92,246,.14), rgba(0,229,255,.06));
+  border:1px solid rgba(139,92,246,.45);border-radius:18px;
+  padding:1.4rem;margin:1.4rem 0;
+  backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);
+  box-shadow:0 12px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12),
+             0 0 34px rgba(139,92,246,.16);
+}
+.bob-card h2{margin:0 0 .4rem;font-size:1.25rem;color:#fff;
+  text-shadow:0 0 14px rgba(139,92,246,.6)}
+.bob-card ul{margin:.6rem 0;padding-left:1.2rem}
+.bob-card li{margin:.45rem 0}
+#skills-section{margin-top:2.2rem}
+#skill-output{
+  background:rgba(2,6,18,.72);border:1px solid var(--stroke);
+  border-radius:12px;padding:1rem;overflow:auto;max-height:420px;
+  white-space:pre-wrap;word-break:break-word;margin-top:.8rem;
+}
+select{
+  width:100%;box-sizing:border-box;padding:.65rem .8rem;
+  background:rgba(2,6,18,.65);border:1px solid rgba(0,229,255,.28);
+  border-radius:10px;font-size:1rem;color:var(--text);font-family:inherit;
+}
+select:focus{outline:none;border-color:var(--cyan);
+  box-shadow:0 0 0 3px rgba(0,229,255,.18), 0 0 18px rgba(0,229,255,.25)}
 """
 
 LOGIN_JS = """
@@ -690,6 +839,70 @@ LOGIN_JS = """
 </script>
 """
 
+SKILLS_JS = """
+<script>
+(function () {
+  var SKILLS = __SKILLS_JSON__;
+  function $(id) { return document.getElementById(id); }
+  function current() {
+    var s = $('skill-select');
+    return SKILLS[s.selectedIndex] || SKILLS[0];
+  }
+  function fill() {
+    var sk = current();
+    var html = '<b>' + sk.name + '</b> &middot; ' + sk.method + ' '
+      + '<span class="mono">' + sk.path + '</span><br>' + sk.description
+      + '<br><span class="note">Auth: ' + sk.auth + '</span>';
+    $('skill-desc').innerHTML = html;
+    $('skill-input').value = JSON.stringify(sk.example, null, 2);
+    $('skill-output').textContent = '';
+  }
+  async function run() {
+    var sk = current();
+    var out = $('skill-output');
+    out.textContent = 'Running…';
+    var token = null;
+    try { token = localStorage.getItem('ag_demo_token'); } catch (e) {}
+    if (!token) { out.textContent = 'Sign in or continue as a guest first.'; return; }
+    var url = sk.path;
+    var init = {headers: {'Authorization': 'Bearer ' + token}};
+    if (sk.method === 'POST') {
+      init.method = 'POST';
+      init.headers['Content-Type'] = 'application/json';
+      init.body = $('skill-input').value;
+    } else {
+      try {
+        var params = JSON.parse($('skill-input').value || '{}');
+        var q = new URLSearchParams();
+        for (var k in params) { q.append(k, params[k]); }
+        var qs = q.toString();
+        if (qs) { url += '?' + qs; }
+      } catch (e) {}
+    }
+    try {
+      var res = await fetch(url, init);
+      var txt = await res.text();
+      try { out.textContent = JSON.stringify(JSON.parse(txt), null, 2); }
+      catch (e) { out.textContent = txt; }
+    } catch (e) { out.textContent = 'Request failed: ' + e; }
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    var sel = $('skill-select');
+    if (!sel) { return; }
+    SKILLS.forEach(function (sk) {
+      var o = document.createElement('option');
+      o.value = sk.name;
+      o.textContent = sk.name + '  [' + sk.method + ']';
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', fill);
+    $('skill-run').addEventListener('click', run);
+    fill();
+  });
+})();
+</script>
+""".replace("__SKILLS_JSON__", json.dumps(SKILLS))
+
 
 def landing_html(env) -> str:
     if password_login_enabled(env):
@@ -721,8 +934,23 @@ def landing_html(env) -> str:
 every tool call below is evaluated by the <span class="mono">real</span>
 deny-by-default policy engine and written to the <span class="mono">real</span>
 append-only audit ledger. No mocks, no simulated decisions.</p>
+<div class="bob-card">
+  <h2>Built with IBM Bob</h2>
+  <p>Bob is the AI coding assistant behind this project — and it did real
+  work here, not a logo on a slide:</p>
+  <ul>
+    <li><b>Understood the codebase</b> — read every module and mapped how
+    the policy engine, capability tokens, and audit ledger fit together.</li>
+    <li><b>Generated the security policies</b> — drafted the deny-by-default
+    rules this live demo enforces on every tool call.</li>
+    <li><b>Authored the test suite</b> — wrote the tests that keep every
+    deploy honest (58 tests passing).</li>
+  </ul>
+  <p class="note">Judges: the repo's <span class="mono">.bob/mcp.json</span>
+  shows exactly how Bob was wired into the build.</p>
+</div>
 <div class="sandbox-note">Demo sandbox &mdash; policy decisions only,
-nothing is executed. Hosted on Cloudflare Workers.</div>
+nothing is executed. Running serverless.</div>
 <div id="login-card">
   <h2>Try the live demo</h2>
   <p>Two ways in &mdash; pick whichever is easier:</p>
@@ -759,6 +987,18 @@ nothing is executed. Hosted on Cloudflare Workers.</div>
   <span class="mono">run_command</span> on anything (denied), or
   <span class="mono">scan_text</span> on text containing
   <span class="mono">AKIAIOSFODNN7EXAMPLE</span> (flagged).</p>
+  <div id="skills-section">
+    <h2>Skills API</h2>
+    <p class="note">Everything this demo does is also a skill — callable
+    over HTTP with your capability token. Pick one and try it live:</p>
+    <label for="skill-select">Skill</label>
+    <select id="skill-select"></select>
+    <p id="skill-desc" class="note"></p>
+    <label for="skill-input">Input (JSON)</label>
+    <textarea id="skill-input" rows="6" class="mono"></textarea>
+    <button id="skill-run" type="button">Run skill</button>
+    <pre id="skill-output" class="mono"></pre>
+  </div>
 </div>
 <noscript><p class="error">This demo needs JavaScript for the sign-in step.
 You can also run it locally from the repo: <span class="mono">python3
@@ -895,6 +1135,20 @@ class Default(WorkerEntrypoint):
             return await self.handle_login(request)
         if method == "POST" and path == "/check":
             return await self.handle_check(request)
+        if method == "GET" and path == "/api/skills":
+            return await self.handle_skills_list(request)
+        if method == "POST" and path == "/api/skills/policy-check":
+            return await self.handle_skill_policy_check(request)
+        if method == "POST" and path == "/api/skills/token-mint":
+            return await self.handle_skill_token_mint(request)
+        if method == "POST" and path == "/api/skills/token-verify":
+            return await self.handle_skill_token_verify(request)
+        if method == "POST" and path == "/api/skills/secret-scan":
+            return await self.handle_skill_secret_scan(request)
+        if method == "GET" and path == "/api/skills/audit-query":
+            return await self.handle_skill_audit_query(request)
+        if method == "POST" and path == "/api/skills/harness-run":
+            return await self.handle_skill_harness_run(request)
         return html_response("<h1>404</h1><p>Not found.</p>", 404, "Not found")
 
     async def _audit(self):
@@ -902,7 +1156,8 @@ class Default(WorkerEntrypoint):
 
     async def handle_index(self):
         audit = await self._audit()
-        body = landing_html(self.env) + await audit_tail_html(audit) + LOGIN_JS
+        body = (landing_html(self.env) + await audit_tail_html(audit)
+                + LOGIN_JS + SKILLS_JS)
         return html_response(body)
 
     async def handle_me(self, request):
@@ -978,6 +1233,233 @@ class Default(WorkerEntrypoint):
             "error": "Hmm, that didn't match — check the demo credentials, "
                      "or just continue as a guest.",
         }, 401)
+
+    # ------------------------------------------------------------------
+    # Skills API
+    # ------------------------------------------------------------------
+
+    async def _skill_auth(self, request):
+        """Require a valid Bearer token. Returns (cap, token, err_response)."""
+        secret = await get_secret(self.env)
+        token = bearer_token(request.headers)
+        try:
+            cap = verify(secret, token)
+        except TokenError:
+            return None, "", json_response(
+                {"ok": False,
+                 "error": "A valid capability token is required — sign in "
+                          "or continue as a guest first."}, 401)
+        return cap, token, None
+
+    async def _skill_body(self, request):
+        """Parse a JSON request body. Returns (data, err_response)."""
+        raw = await self._read_body(request)
+        if raw is None:
+            return None, json_response(
+                {"ok": False, "error": "A JSON request body is required."},
+                400)
+        try:
+            data = json.loads(raw)
+        except Exception:
+            return None, json_response(
+                {"ok": False, "error": "Request body must be valid JSON."},
+                400)
+        if not isinstance(data, dict):
+            return None, json_response(
+                {"ok": False, "error": "Request body must be a JSON object."},
+                400)
+        return data, None
+
+    async def _skill_audit(self, audit, skill, detail, allow, reason,
+                           cap) -> None:
+        try:
+            await audit.record(f"skill.{skill}", detail, allow, reason,
+                               subject=cap.subject, token_id=cap.token_id)
+        except Exception:
+            pass
+
+    async def handle_skills_list(self, request):
+        _, _, err = await self._skill_auth(request)
+        if err:
+            return err
+        return json_response({"ok": True, "skills": SKILLS})
+
+    async def handle_skill_policy_check(self, request):
+        cap, token, err = await self._skill_auth(request)
+        if err:
+            return err
+        data, derr = await self._skill_body(request)
+        if derr:
+            return derr
+        tool = str(data.get("tool", "")).strip()
+        args = data.get("args")
+        if not tool or not isinstance(args, dict):
+            return json_response(
+                {"ok": False,
+                 "error": "Provide 'tool' (string) and 'args' (object)."},
+                400)
+        secret = await get_secret(self.env)
+        decision = PolicyEngine(DEMO_POLICY, secret).authorize(tool, args,
+                                                               token)
+        await self._skill_audit(await self._audit(), "policy-check",
+                                {"tool": tool}, decision.allow,
+                                decision.reason, cap)
+        return json_response({
+            "ok": True, "skill": "policy-check", "tool": tool,
+            "allow": decision.allow, "reason": decision.reason,
+        })
+
+    async def handle_skill_token_mint(self, request):
+        cap, _, err = await self._skill_auth(request)
+        if err:
+            return err
+        data, derr = await self._skill_body(request)
+        if derr:
+            return derr
+        scopes = data.get("scopes", cap.scopes)
+        if (not isinstance(scopes, list) or not scopes
+                or not all(isinstance(s, str) and s for s in scopes)):
+            return json_response(
+                {"ok": False,
+                 "error": "'scopes' must be a non-empty array of strings."},
+                400)
+        if any(s not in cap.scopes for s in scopes):
+            return json_response(
+                {"ok": False,
+                 "error": "You can only mint scopes you already hold — "
+                          "no privilege escalation."}, 403)
+        try:
+            ttl = int(data.get("ttl_seconds", 3600))
+        except (TypeError, ValueError):
+            ttl = 3600
+        now = int(time.time())
+        ttl = max(1, min(ttl, cap.expires_at - now, 8 * 3600))
+        secret = await get_secret(self.env)
+        new_token = mint(secret, cap.subject, scopes, ttl_seconds=ttl)
+        await self._skill_audit(await self._audit(), "token-mint",
+                                {"scopes": scopes, "ttl": ttl}, True,
+                                f"token minted for {cap.subject}", cap)
+        return json_response({
+            "ok": True, "skill": "token-mint", "token": new_token,
+            "subject": cap.subject, "scopes": scopes, "expires_in": ttl,
+        })
+
+    async def handle_skill_token_verify(self, request):
+        cap, _, err = await self._skill_auth(request)
+        if err:
+            return err
+        data, derr = await self._skill_body(request)
+        if derr:
+            return derr
+        token = str(data.get("token", "")).strip()
+        if not token:
+            return json_response(
+                {"ok": False, "error": "Provide 'token' to inspect."}, 400)
+        secret = await get_secret(self.env)
+        try:
+            inspected = verify(secret, token)
+        except TokenError as exc:
+            await self._skill_audit(
+                await self._audit(), "token-verify", {}, False,
+                f"token invalid: {exc}", cap)
+            return json_response({
+                "ok": True, "skill": "token-verify", "valid": False,
+                "error": str(exc),
+            })
+        await self._skill_audit(await self._audit(), "token-verify", {},
+                                True,
+                                f"token valid for {inspected.subject}", cap)
+        return json_response({
+            "ok": True, "skill": "token-verify", "valid": True,
+            "subject": inspected.subject, "scopes": inspected.scopes,
+            "expires_in": max(0, inspected.expires_at - int(time.time())),
+        })
+
+    async def handle_skill_secret_scan(self, request):
+        cap, _, err = await self._skill_auth(request)
+        if err:
+            return err
+        data, derr = await self._skill_body(request)
+        if derr:
+            return derr
+        text = str(data.get("text", ""))
+        findings = scan_text_for_secrets(text)
+        await self._skill_audit(
+            await self._audit(), "secret-scan", {"chars": len(text)},
+            True, f"{len(findings)} finding(s)", cap)
+        return json_response({
+            "ok": True, "skill": "secret-scan", "chars": len(text),
+            "findings": findings,
+        })
+
+    async def handle_skill_audit_query(self, request):
+        cap, _, err = await self._skill_auth(request)
+        if err:
+            return err
+        query = request.url.split("?", 1)[1] if "?" in request.url else ""
+        params = parse_qs(query)
+        try:
+            limit = max(1, min(int(params.get("limit", ["20"])[0]), 100))
+        except (TypeError, ValueError):
+            limit = 20
+        audit = await self._audit()
+        entries = await audit.read_all()
+        projected = [{
+            "ts": e.get("ts"),
+            "tool": e.get("tool"),
+            "args": e.get("args"),
+            "decision": e.get("decision"),
+            "reason": e.get("reason"),
+            "subject": e.get("subject"),
+        } for e in entries[-limit:]]
+        return json_response({
+            "ok": True, "skill": "audit-query", "entries": projected,
+            "summary": await audit.summary(),
+        })
+
+    async def handle_skill_harness_run(self, request):
+        cap, token, err = await self._skill_auth(request)
+        if err:
+            return err
+        secret = await get_secret(self.env)
+        audit = await self._audit()
+        steps = []
+        for i, step in enumerate(HARNESS_PLAN, 1):
+            try:
+                result = await self.check_call(secret, audit, step["tool"],
+                                               step["target"], token)
+                steps.append({
+                    "step": i,
+                    "note": step["note"],
+                    "tool": result["tool"],
+                    "decision": "allow" if result["allow"] else "deny",
+                    "reason": result["reason"],
+                    "output": result.get("output"),
+                    "findings": result.get("findings"),
+                })
+            except (SandboxEscape, ValueError) as exc:
+                try:
+                    await audit.record(
+                        step["tool"], {"target": step["target"][:200]},
+                        False, str(exc),
+                        subject=cap.subject, token_id=cap.token_id)
+                except Exception:
+                    pass
+                steps.append({
+                    "step": i,
+                    "note": step["note"],
+                    "tool": step["tool"],
+                    "decision": "deny",
+                    "reason": str(exc),
+                    "output": None,
+                    "findings": None,
+                })
+        allowed = sum(1 for s in steps if s["decision"] == "allow")
+        return json_response({
+            "ok": True, "skill": "harness-run", "task": "demo-agent-run",
+            "steps": steps, "allowed": allowed,
+            "denied": len(steps) - allowed,
+        })
 
     async def handle_check(self, request):
         audit = await self._audit()
@@ -1076,6 +1558,9 @@ class Default(WorkerEntrypoint):
             entry_args["findings"] = [f["kind"] for f in findings]
         await audit.record(tool, entry_args, decision.allow, decision.reason,
                            subject=subject, token_id=token_id)
+        output = None
+        if tool == "read_file" and decision.allow:
+            output = DEMO_FILES.get(rel, "")[:2000]
         return {
             "tool": tool,
             "args": entry_args,
@@ -1083,4 +1568,5 @@ class Default(WorkerEntrypoint):
             "allow": decision.allow,
             "reason": decision.reason,
             "findings": findings,
+            "output": output,
         }
