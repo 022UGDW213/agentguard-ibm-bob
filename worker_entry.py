@@ -459,32 +459,134 @@ async def get_secret(env) -> bytes:
 
 
 PAGE_CSS = """
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-     max-width:860px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
-h1{font-size:1.6rem} .sub{color:#555;margin-top:-0.5rem}
-.sandbox-note{background:#fff8c5;border:1px solid #d4a72c;border-radius:8px;
-     padding:.7rem 1rem;margin:1rem 0;font-weight:600}
-form{background:#f6f8fa;border:1px solid #ddd;border-radius:8px;
-     padding:1rem;margin:1rem 0}
-label{display:block;margin:.6rem 0 .2rem;font-weight:600}
-input[type=text],input[type=password],textarea{width:100%;box-sizing:border-box;
-     padding:.5rem;border:1px solid #bbb;border-radius:4px;font-size:1rem}
-button{margin-top:.8rem;padding:.6rem 1.2rem;font-size:1rem;
-       background:#0969da;color:#fff;border:0;border-radius:6px;cursor:pointer}
-button:disabled{opacity:.6;cursor:wait}
-.big-guest{display:block;width:100%;padding:.9rem;font-size:1.1rem;
-       font-weight:600;margin:.6rem 0}
-#login-card{background:#f6f8fa;border:1px solid #ddd;border-radius:8px;
-     padding:1.2rem;margin:1rem 0}
-#login-card h2{margin-top:0}
-.error{color:#d1242f;font-weight:600;min-height:1.2em}
-.banner{padding:.8rem 1rem;border-radius:8px;margin:1rem 0;font-weight:600}
-.allow{background:#dafbe1;border:1px solid #4ac26b}
-.deny{background:#ffebe9;border:1px solid #ff8182}
-table{border-collapse:collapse;width:100%;font-size:.85rem;margin-top:.5rem}
-th,td{border:1px solid #ddd;padding:.35rem .5rem;text-align:left;vertical-align:top}
-th{background:#f0f0f0} .mono{font-family:ui-monospace,Menlo,monospace}
-.note{color:#555;font-size:.9rem}
+:root{
+  --bg:#04050d;
+  --cyan:#00e5ff;
+  --magenta:#ff2ea6;
+  --violet:#8b5cf6;
+  --green:#00ffa3;
+  --red:#ff4d6d;
+  --amber:#ffc400;
+  --text:#eaf6ff;
+  --muted:#93a4c4;
+  --glass:rgba(16,24,48,.55);
+  --stroke:rgba(0,229,255,.22);
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{
+  margin:0;min-height:100vh;color:var(--text);
+  font-family:'Rajdhani','Segoe UI',system-ui,-apple-system,sans-serif;
+  font-size:1.08rem;line-height:1.55;
+  background:
+    radial-gradient(1100px 500px at 15% -5%, rgba(0,229,255,.12), transparent 60%),
+    radial-gradient(900px 500px at 90% 10%, rgba(255,46,166,.10), transparent 60%),
+    radial-gradient(700px 700px at 50% 110%, rgba(139,92,246,.12), transparent 60%),
+    var(--bg);
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,229,255,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,.055) 1px, transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 18%, #000 25%, transparent 78%);
+  mask-image:radial-gradient(ellipse 90% 70% at 50% 18%, #000 25%, transparent 78%);
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+  background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,12,.55) 100%);
+}
+.wrap{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+h1{
+  font-family:'Orbitron',sans-serif;font-weight:800;
+  font-size:clamp(1.7rem,4.6vw,2.5rem);letter-spacing:.06em;margin:0 0 .4rem;
+  background:linear-gradient(92deg,var(--cyan) 10%,var(--violet) 55%,var(--magenta) 90%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 18px rgba(0,229,255,.35));
+}
+h2{font-family:'Orbitron',sans-serif;letter-spacing:.06em}
+.sub{color:var(--muted);margin:.2rem 0 1.2rem;font-size:1.12rem}
+.sandbox-note{
+  background:var(--glass);border:1px solid rgba(255,196,0,.38);border-radius:14px;
+  padding:.8rem 1.1rem;margin:1.2rem 0;font-weight:600;color:#ffe9a8;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 0 24px rgba(255,196,0,.08), inset 0 1px 0 rgba(255,255,255,.08);
+}
+form,#login-card{
+  background:linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+  border:1px solid var(--stroke);border-radius:18px;
+  padding:1.4rem;margin:1.4rem 0;
+  backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);
+  box-shadow:0 12px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12),
+             0 0 28px rgba(0,229,255,.07);
+}
+#login-card{border-color:rgba(255,46,166,.32);
+  box-shadow:0 12px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12),
+             0 0 34px rgba(255,46,166,.12)}
+#login-card h2{margin:0 0 .4rem;font-size:1.25rem;color:#fff;
+  text-shadow:0 0 14px rgba(255,46,166,.55)}
+label{display:block;margin:.7rem 0 .25rem;font-weight:600;color:var(--text);letter-spacing:.04em}
+input[type=text],input[type=password],textarea{
+  width:100%;box-sizing:border-box;padding:.65rem .8rem;
+  background:rgba(2,6,18,.65);border:1px solid rgba(0,229,255,.28);
+  border-radius:10px;font-size:1rem;color:var(--text);font-family:inherit;
+  transition:border-color .2s, box-shadow .2s;
+}
+input[type=text]:focus,input[type=password]:focus,textarea:focus{
+  outline:none;border-color:var(--cyan);
+  box-shadow:0 0 0 3px rgba(0,229,255,.18), 0 0 18px rgba(0,229,255,.25);
+}
+button{
+  margin-top:.9rem;padding:.7rem 1.4rem;font-size:1rem;font-weight:700;letter-spacing:.06em;
+  font-family:'Rajdhani',sans-serif;color:var(--cyan);text-transform:uppercase;
+  background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.55);
+  border-radius:12px;cursor:pointer;transition:all .2s;
+}
+button:hover:not(:disabled){background:rgba(0,229,255,.18);
+  box-shadow:0 0 22px rgba(0,229,255,.35);transform:translateY(-1px)}
+button:disabled{opacity:.55;cursor:wait}
+.big-guest{
+  display:block;width:100%;padding:1rem;font-size:1.15rem;font-weight:700;
+  color:#04121a;background:linear-gradient(92deg,var(--cyan),#8ef4ff 45%,var(--magenta));
+  border:0;border-radius:14px;margin:.8rem 0;letter-spacing:.06em;text-transform:uppercase;
+  box-shadow:0 0 28px rgba(0,229,255,.45), 0 0 60px rgba(255,46,166,.18);
+  animation:guestpulse 2.6s ease-in-out infinite;
+}
+.big-guest:hover:not(:disabled){transform:translateY(-2px);
+  background:linear-gradient(92deg,var(--cyan),#8ef4ff 45%,var(--magenta));
+  box-shadow:0 0 42px rgba(0,229,255,.62), 0 0 84px rgba(255,46,166,.28)}
+@keyframes guestpulse{
+  0%,100%{box-shadow:0 0 26px rgba(0,229,255,.40), 0 0 55px rgba(255,46,166,.15)}
+  50%{box-shadow:0 0 42px rgba(0,229,255,.62), 0 0 84px rgba(255,46,166,.30)}
+}
+.error{color:#ff6b8a;font-weight:600;min-height:1.2em;
+  text-shadow:0 0 12px rgba(255,77,109,.4)}
+.banner{padding:.9rem 1.1rem;border-radius:14px;margin:1.2rem 0;font-weight:700;
+  letter-spacing:.06em;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.allow{background:rgba(0,255,163,.10);border:1px solid rgba(0,255,163,.45);
+  color:#c2ffe2;box-shadow:0 0 26px rgba(0,255,163,.18), inset 0 1px 0 rgba(255,255,255,.1)}
+.deny{background:rgba(255,46,120,.10);border:1px solid rgba(255,77,109,.5);
+  color:#ffd3dd;box-shadow:0 0 26px rgba(255,46,120,.22), inset 0 1px 0 rgba(255,255,255,.1)}
+table{border-collapse:collapse;width:100%;font-size:.92rem;margin-top:.6rem;
+  background:rgba(10,16,36,.55);border:1px solid var(--stroke);border-radius:12px;
+  overflow:hidden;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+th,td{border-bottom:1px solid rgba(255,255,255,.07);padding:.5rem .7rem;
+  text-align:left;vertical-align:top}
+th{font-family:'Orbitron',sans-serif;font-size:.7rem;letter-spacing:.14em;
+  color:var(--cyan);text-transform:uppercase;background:rgba(0,229,255,.06)}
+tr:last-child td{border-bottom:0}
+.mono{font-family:ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  color:#8ef4ff;font-size:.92em}
+.note{color:var(--muted);font-size:.95rem}
+a{color:var(--cyan);text-decoration:none;border-bottom:1px dotted rgba(0,229,255,.5)}
+a:hover{text-shadow:0 0 12px rgba(0,229,255,.65)}
+@media (max-width:640px){
+  .wrap{padding:1.6rem .9rem 3rem}
+  form,#login-card{padding:1.1rem}
+  h1{letter-spacing:.03em}
+  .big-guest{font-size:1rem}
+}
 """
 
 LOGIN_JS = """
@@ -667,8 +769,15 @@ web_demo.py</span></p></noscript>
 def page(body: str, title: str = "AgentGuard live demo") -> str:
     return (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         f"<title>{esc(title)}</title>"
-        f"<style>{PAGE_CSS}</style></head><body>{body}</body></html>"
+        "<link rel='preconnect' href='https://fonts.googleapis.com'>"
+        "<link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>"
+        "<link href='https://fonts.googleapis.com/css2?"
+        "family=Orbitron:wght@600;800&family=Rajdhani:wght@400;500;600;700"
+        "&display=swap' rel='stylesheet'>"
+        f"<style>{PAGE_CSS}</style></head><body><div class='wrap'>{body}"
+        "</div></body></html>"
     )
 
 
