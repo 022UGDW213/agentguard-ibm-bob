@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: 13.333in 7.5in; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; background: #0a0e14; color: #e8eef4; }
+  .slide {
+    width: 13.333in; height: 7.5in;
+    page-break-after: always; position: relative;
+    padding: 0.9in 1in;
+    background: radial-gradient(1200px 600px at 85% -10%, rgba(0,229,255,.10), transparent 60%),
+                radial-gradient(900px 500px at 10% 110%, rgba(255,46,136,.08), transparent 60%),
+                #0a0e14;
+    overflow: hidden;
+  }
+  .slide:last-child { page-break-after: avoid; }
+  .kicker { font-size: 20pt; letter-spacing: 4pt; text-transform: uppercase; color: #00e5ff; margin-bottom: 0.25in; }
+  h1 { font-size: 52pt; line-height: 1.12; font-weight: 800; margin-bottom: 0.25in; }
+  h1 .accent { color: #00e5ff; }
+  h1 .accent2 { color: #ff2e88; }
+  h2 { font-size: 36pt; font-weight: 700; margin-bottom: 0.3in; }
+  p.lede { font-size: 22pt; line-height: 1.45; color: #b9c6d2; max-width: 10.5in; }
+  ul { list-style: none; margin-top: 0.25in; }
+  ul li { font-size: 21pt; line-height: 1.35; margin-bottom: 0.22in; padding-left: 0.45in; position: relative; color: #d5dde6; }
+  ul li::before { content: "▸"; position: absolute; left: 0; color: #00e5ff; }
+  .mono { font-family: "JetBrains Mono", "Consolas", "Courier New", monospace; }
+  .code-line { font-family: "JetBrains Mono", "Consolas", monospace; font-size: 16pt; background: #111822; border: 1px solid #1f2b3a; border-radius: 10px; padding: 0.10in 0.25in; margin-top: 0.10in; color: #9ef0ff; }
+  .code-line .deny { color: #ff5d5d; font-weight: 700; }
+  .code-line .allow { color: #59ffa0; font-weight: 700; }
+  .foot { position: absolute; bottom: 0.55in; left: 1in; right: 1in; font-size: 15pt; color: #5b6b7d; display: flex; justify-content: space-between; }
+  .pillars { display: flex; gap: 0.4in; margin-top: 0.35in; }
+  .pillar { flex: 1; background: #101722; border: 1px solid #1f2b3a; border-top: 3px solid #00e5ff; border-radius: 12px; padding: 0.3in; }
+  .pillar h3 { font-size: 20pt; color: #00e5ff; margin-bottom: 0.12in; }
+  .pillar p { font-size: 17pt; color: #b9c6d2; line-height: 1.4; }
+  .big-num { font-size: 120pt; font-weight: 800; color: #00e5ff; line-height: 1; }
+  .big-num small { font-size: 30pt; color: #b9c6d2; font-weight: 400; }
+  .title-meta { font-size: 20pt; color: #8fa0b3; margin-top: 0.45in; line-height: 1.6; }
+  .diagram { margin-top: 0.3in; background: #101722; border: 1px solid #1f2b3a; border-radius: 12px; padding: 0.35in 0.4in; font-family: "JetBrains Mono", Consolas, monospace; font-size: 19pt; line-height: 1.7; color: #d5dde6; }
+  .casebox { margin-top: 0.22in; background: #101722; border: 1px solid #1f2b3a; border-left: 4px solid #ff2e88; border-radius: 10px; padding: 0.2in 0.3in; }
+  .casebox .tag { font-size: 13pt; letter-spacing: 3pt; text-transform: uppercase; color: #ff2e88; margin-bottom: 0.08in; }
+  .casebox p { font-size: 16pt; color: #d5dde6; line-height: 1.4; }
+  .casebox .cve { font-family: "JetBrains Mono", Consolas, monospace; color: #9ef0ff; }
+  .center { text-align: center; }
+  .url { color: #00e5ff; }
+</style>
+</head>
+<body>
+
+<!-- Slide 1 -->
+<div class="slide">
+  <div class="kicker">Team CodeBase Loops · AngelHack “Building with IBM Bob”</div>
+  <h1>AgentGuard:<br><span class="accent">guardrails</span> for AI agents,<br>enforced <span class="accent2">by default</span></h1>
+  <p class="lede">AI agents act — they call tools, move files, hit APIs. Nobody checks whether they’re allowed to. AgentGuard is the checkpoint every agent tool call must pass.</p>
+  <div class="title-meta">Juan Serrano · github.com/022UGDW213/agentguard-ibm-bob</div>
+  <div class="foot"><span>1 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
+</div>
+
+<!-- Slide 2 -->
+<div class="slide">
+  <div class="kicker">The problem</div>
+  <h2>The confused deputy</h2>
+  <p class="lede">Agents are the new attack surface.</p>
+  <ul>
+    <li>An agent tricked by a malicious prompt, a poisoned tool description, or a compromised plugin will happily read <span class="mono">/etc/passwd</span> or exfiltrate keys — <em>with your credentials</em>.</li>
+    <li>Red-team / blue-team tooling was built for humans, not for software acting at machine speed.</li>
+    <li>Your agent is a deputy with your keys. Anyone who confuses it <em>becomes</em> you.</li>
+  </ul>
+  <div class="casebox">
+    <div class="tag">This month in the real world</div>
+    <p><span class="cve">CVE-2026-90970</span> (CVSS 9.9, disclosed Oct 2): a crafted flow config escaped GitLab&rsquo;s AI Gateway prompt-template sandbox &rarr; arbitrary commands on the gateway host. Fixed in 19.2.4 / 19.3.2 / 19.4.1. Agent infrastructure is already the target.</p>
+  </div>
+  <div class="foot"><span>2 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
+</div>
+
+<!-- Slide 3 -->
+<div class="slide">
+  <div class="kicker">The solution</div>
+  <h2>Deny by default</h2>
+  <div class="pillars">
+    <div class="pillar"><h3>Policy engine</h3><p>Explicit rules sit in front of every tool call. Anything unmatched is denied — deny rules beat allow rules.</p></div>
+    <div class="pillar"><h3>Capability tokens</h3><p>Authorization travels as HMAC-signed, narrowly-scoped, expiring tokens bound to the agent. No token, no scope, no call.</p></div>
+    <div class="pillar"><h3>Audit ledger</h3><p>Every decision — allow or deny — lands in an append-only ledger with the reason. Proof of what your agents tried to do.</p></div>
+  </div>
+  <p class="lede" style="margin-top:0.35in">This is the confused-deputy fix, and it works with any model.</p>
+  <div class="foot"><span>3 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
+</div>
+
+<!-- Slide 4 -->
+<div class="slide">
+  <div class="kicker">Design</div>
+  <h2>Model-agnostic by design</h2>
+  <ul>
+    <li>The harness wraps a <span class="mono">ModelBackend</span> interface — the same choke point governs local tools, a Bob-driven loop, or any future model.</li>
+    <li>Secure-codebase scanner: secret patterns plus live <span class="mono">pip-audit</span> / <span class="mono">npm audit</span> — audit is clean, zero known vulnerabilities.</li>
+    <li>Zero-dependency <span class="mono">Java SDK</span> with the same HMAC tokens (interop proven both ways) + a <span class="mono">JSON module</span> for policies, tokens, audit entries.</li>
+    <li>No stubs, no simulated findings — every component runs for real.</li>
+  </ul>
+  <p class="lede" style="margin-top:0.3in">We don’t care which model you use. The guardrail is the same.</p>
+  <div class="foot"><span>4 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
+</div>
+
+<!-- Slide 5 -->
+<div class="slide">
+  <div class="kicker">Built with IBM Bob</div>
+  <h2>Integration, two directions</h2>
+  <div class="pillars">
+    <div class="pillar"><h3>Bob → AgentGuard</h3><p>A real MCP server (<span class="mono">check_policy</span>, <span class="mono">scan_codebase</span>, <span class="mono">audit_summary</span>) on the official MCP SDK; <span class="mono">.bob/mcp.json</span> auto-wires it into Bob IDE. Bob reads the codebase and <em>generates</em> the security policies.</p></div>
+    <div class="pillar"><h3>AgentGuard → Bob</h3><p><span class="mono">BobShellBackend</span> drives Bob headlessly via the Bob Shell CLI — a Bob-powered agent loop under the same policy engine. Bob <em>authored the test suite</em>: 62 tests passing, 1 skipped.</p></div>
+  </div>
+  <p class="lede" style="margin-top:0.35in">Honest note: IBM publishes no public REST API for Bob — CLI + MCP are the verified surfaces, and we built on exactly those. We read the docs; we didn’t invent endpoints.</p>
+  <div class="foot"><span>5 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
+</div>
+
+<!-- Slide 6 -->
+<div class="slide">
+  <div class="kicker">Live demo</div>
+  <h2>Watch the <span class="accent2">DENY</span> land</h2>
+  <p class="lede"><span class="url">agentguard-demo.o22ugdw213.network</span> — one-click guest login, no signup.</p>
+  <div class="code-line">read_file welcome.txt <span class="allow">→ ALLOW</span> · a legitimate call with a valid token</div>
+  <div class="code-line">read_file /etc/passwd <span class="deny">→ DENY</span> · path escapes the sandbox</div>
+  <div class="code-line">read_file ../../etc/passwd <span class="deny">→ DENY</span> · traversal trick</div>
+  <div class="code-line">run_command <span class="deny">→ DENY</span> · tool the policy never heard of — denied by default</div>
+  <div class="code-line">paste AWS key into scanner <span class="deny">→ FLAGGED</span> · real detection patterns</div>
+  <p class="lede" style="margin-top:0.12in;font-size:19pt">Plus a <b>Skills API</b> try-it console — six live skills (<span class="mono">policy-check</span>, <span class="mono">token-mint</span>, <span class="mono">token-verify</span>, <span class="mono">secret-scan</span>, <span class="mono">audit-query</span>, <span class="mono">harness-run</span>). Run attacks yourself; every attempt lands in the audit ledger. That denial is the whole product.</p>
+  <div class="foot"><span>6 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
+</div>
+
+<!-- Slide 7 -->
+<div class="slide">
+  <div class="kicker">Architecture</div>
+  <h2>One choke point</h2>
+  <div class="diagram">
+    Agent ──▶ <span class="guard">[ GuardedHarness ]</span> ──▶ Tools / Bob backend<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="guard">│</span> policy engine + token verifier<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="guard">├──</span> sidecar: append-only audit ledger<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="guard">└──</span> sidecar: secret + dependency scanner
+  </div>
+  <p class="lede" style="margin-top:0.35in">Deny rules beat allow rules; unmatched calls die. One choke point — that’s the entire security model.</p>
+  <div class="foot"><span>7 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
+</div>
+
+<!-- Slide 8 -->
+<div class="slide">
+  <div class="kicker">Proof it works</div>
+  <div class="big-num">62 <small>tests pass · 1 skipped</small></div>
+  <ul>
+    <li>The 1 skip is the live-Bob test without a key — it skips cleanly, never fakes a result.</li>
+    <li>Cross-language token tests: Java-minted tokens verify in Python and vice versa.</li>
+    <li><span class="mono">pip-audit</span> clean — zero known vulnerabilities in dependencies.</li>
+    <li>CLI verified end to end: allowed calls succeed, <span class="mono">/etc/passwd</span> denied, audit shows 2 allow / 1 deny.</li>
+    <li>Dockerized. No mocks, no stubs.</li>
+  </ul>
+  <p class="lede" style="margin-top:0.25in">A security tool you can’t test is a rumor. Ours has 62 passing tests.</p>
+  <div class="foot"><span>8 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
+</div>
+
+<!-- Slide 9 -->
+<div class="slide">
+  <div class="kicker">What’s next</div>
+  <h2>This is a beginning</h2>
+  <ul>
+    <li>Ship the audit ledger to tamper-evident storage.</li>
+    <li>Per-team policy packs and a hosted policy API.</li>
+    <li>Deeper Bob IDE workflows — pre-tool-call hooks inside Bob’s own loop.</li>
+    <li>Long-term: the all-in-one agent security platform — beyond red-team / blue-team.</li>
+  </ul>
+  <p class="lede" style="margin-top:0.3in">The hackathon project is the first module of the company.</p>
+  <div class="foot"><span>9 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
+</div>
+
+<!-- Slide 10 -->
+<div class="slide">
+  <div class="kicker">The ask</div>
+  <h1 class="center">Agents are acting in<br>production <span class="accent2">today</span>.<br>Give them guardrails.</h1>
+  <div class="title-meta center" style="font-size:22pt">
+    Team CodeBase Loops · Juan Serrano<br>
+    <span class="url">github.com/022UGDW213/agentguard-ibm-bob</span> · <span class="url">agentguard-demo.o22ugdw213.network</span>
+  </div>
+  <div class="foot"><span>10 / 10</span><span>AgentGuard · CodeBase Loops</span></div>
+</div>
+
+</body>
+</html>
