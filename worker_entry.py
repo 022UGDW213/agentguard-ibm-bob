@@ -944,7 +944,7 @@ append-only audit ledger. No mocks, no simulated decisions.</p>
     <li><b>Generated the security policies</b> — drafted the deny-by-default
     rules this live demo enforces on every tool call.</li>
     <li><b>Authored the test suite</b> — wrote the tests that keep every
-    deploy honest (58 tests passing).</li>
+    deploy honest (62 tests passing).</li>
   </ul>
   <p class="note">Judges: the repo's <span class="mono">.bob/mcp.json</span>
   shows exactly how Bob was wired into the build.</p>
