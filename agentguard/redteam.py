@@ -220,6 +220,16 @@ def fetch_learned_seeds(base_url: str, token: str,
         "GET", base_url + "/api/skills/audit-query?limit=%d" % limit, token)
     if status != 200:
         raise RuntimeError("audit-query failed (http %s)" % status)
+    return seeds_from_ledger(data)
+
+
+def seeds_from_ledger(data: dict) -> list:
+    """Extract learned seeds from an audit-query response dict.
+
+    Pure function — lets callers load a ledger snapshot saved by another
+    client (e.g. curl, which tolerates the sandbox egress proxy better than
+    Python's urllib on large responses) via --ledger-file.
+    """
     seeds = []
     for entry in data.get("entries", []):
         if entry.get("tool") != "skill.trap.intel":
@@ -328,6 +338,11 @@ def main(argv: list | None = None) -> int:
                         help="variant cap per learned sample")
     parser.add_argument("--limit", type=int, default=200,
                         help="audit ledger entries to scan for seeds")
+    parser.add_argument("--ledger-file", default=None,
+                        help="JSON file with a saved audit-query response; "
+                             "seeds are read from it instead of the live "
+                             "ledger (handy when the sandbox egress proxy "
+                             "truncates large urllib reads)")
     args = parser.parse_args(argv)
 
     try:
@@ -343,7 +358,11 @@ def main(argv: list | None = None) -> int:
         for attempt in range(4):
             try:
                 token = mint_guest_token(base_url)
-                seeds = fetch_learned_seeds(base_url, token, limit)
+                if args.ledger_file:
+                    with open(args.ledger_file, encoding="utf-8") as fh:
+                        seeds = seeds_from_ledger(json.load(fh))
+                else:
+                    seeds = fetch_learned_seeds(base_url, token, limit)
                 break
             except RuntimeError as exc:
                 # The sandbox egress proxy intermittently truncates larger
