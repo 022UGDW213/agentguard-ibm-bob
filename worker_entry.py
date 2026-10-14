@@ -1299,6 +1299,20 @@ class Default(WorkerEntrypoint):
                  "error": "Provide 'tool' (string) and 'args' (object)."},
                 400)
         secret = await get_secret(self.env)
+        # Run the same sandbox validation as /check: a read_file target
+        # must resolve inside the demo directory, or it is denied.
+        if tool == "read_file":
+            try:
+                args = dict(args)
+                args["path"] = resolve_demo_path(str(args.get("path", "")))
+            except (SandboxEscape, ValueError) as exc:
+                await self._skill_audit(
+                    await self._audit(), "policy-check",
+                    {"tool": tool}, False, str(exc), cap)
+                return json_response({
+                    "ok": True, "skill": "policy-check", "tool": tool,
+                    "allow": False, "reason": str(exc),
+                })
         decision = PolicyEngine(DEMO_POLICY, secret).authorize(tool, args,
                                                                token)
         await self._skill_audit(await self._audit(), "policy-check",
