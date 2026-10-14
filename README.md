@@ -48,7 +48,7 @@ agentguard/
   cli.py         CLI: demo | scan | check | token
 .bob/mcp.json    project MCP config so Bob picks up the server automatically
 docs/bob-integration.md   verified Bob integration surfaces + human setup steps
-tests/           pytest suite (28 tests; 1 live-Bob test skips without a key)
+tests/           pytest suite (62 tests; 1 live-Bob test skips without a key)
 Dockerfile       container image
 ```
 
@@ -59,7 +59,7 @@ pip install -r requirements.txt
 python3 -m pytest tests/ -v
 ```
 
-Expected: **28 passed, 1 skipped**. The skipped test needs a real Bob Shell
+Expected: **62 passed, 1 skipped**. The skipped test needs a real Bob Shell
 install + `BOBSHELL_API_KEY` (see below); it never fakes a result.
 
 ## IBM Bob integration
